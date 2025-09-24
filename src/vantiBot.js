@@ -8,8 +8,7 @@ const VANTI_URL = "https://pagosenlinea.grupovanti.com/";
 const SELECTOR_VALOR = "label.form.form-control.disabled";
 const SELECTOR_POPUP = "#swal2-html-container";
 
-// Lee las credenciales y el servidor del proxy desde variables de entorno
-const proxyServer = process.env.PROXY_SERVER; // Ejemplo: global.rotgb.711proxy.com:10000
+const proxyServer = process.env.PROXY_SERVER;
 const proxyUsername = process.env.PROXY_USERNAME;
 const proxyPassword = process.env.PROXY_PASSWORD;
 
@@ -22,7 +21,6 @@ const args = [
   "--disable-blink-features=AutomationControlled",
 ];
 
-// Añade el argumento del proxy solo si está definido
 if (proxyServer) {
   args.push(`--proxy-server=${proxyServer}`);
 }
@@ -33,17 +31,15 @@ const DEFAULT_OPTS = {
   defaultViewport: { width: 1280, height: 900 }
 };
 
-// ... (El resto del archivo no cambia, pero se incluye completo para evitar errores)
-
 function nowISO() {
   return new Date().toISOString();
 }
 
 function parseMontoCOP(txt) {
-  if (!txt) return null;
-  const raw = txt.replace(/[^\d,.,-]/g, "").replace(/\./g, "").replace(",", ".");
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
+    if (!txt) return null;
+    const raw = txt.replace(/\D/g, "");
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
 }
 
 async function extractValorAPagar(page) {
@@ -89,12 +85,12 @@ function interpretPopupText(txtRaw){
 
 function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-export async function consultarVanti(numeroDeCuenta, {
-  retries = 3,
+// La función ahora recibe un objeto con los parámetros
+export async function consultarVanti({ cuenta, empresa = "79", retries = 3 }, {
   timeoutMs = 30000,
   launchOptions = DEFAULT_OPTS
 } = {}) {
-  if (!numeroDeCuenta) throw new Error("Falta numeroDeCuenta");
+  if (!cuenta) throw new Error("Falta el número de cuenta");
 
   let lastErr = null;
 
@@ -105,7 +101,6 @@ export async function consultarVanti(numeroDeCuenta, {
       const page = await browser.newPage();
       page.setDefaultTimeout(timeoutMs);
 
-      // --- CAMBIO CLAVE: Autenticación del Proxy ---
       if (proxyUsername && proxyPassword) {
         await page.authenticate({
           username: proxyUsername,
@@ -115,11 +110,12 @@ export async function consultarVanti(numeroDeCuenta, {
 
       await page.goto(VANTI_URL, { waitUntil: "networkidle2", timeout: timeoutMs });
 
+      // --- CAMBIO CLAVE: Usar el parámetro 'empresa' ---
       await page.waitForSelector("#empresa", { visible: true });
-      await page.select("#empresa", "79");
+      await page.select("#empresa", empresa); // Aquí se usa la variable
 
       await page.waitForSelector("#cuenta_contrato", { visible: true });
-      await page.type("#cuenta_contrato", numeroDeCuenta, { delay: 10 });
+      await page.type("#cuenta_contrato", cuenta, { delay: 10 });
 
       if (await page.$("#image1")) {
         await page.click("#image1");
@@ -145,7 +141,7 @@ export async function consultarVanti(numeroDeCuenta, {
         return {
           ok: info.status === "UNKNOWN" ? false : true,
           status: info.status,
-          account: numeroDeCuenta,
+          account: cuenta,
           message: info.message,
           fetched_at: nowISO(),
           attempt
@@ -158,7 +154,7 @@ export async function consultarVanti(numeroDeCuenta, {
       return {
         ok: true,
         status: "DUE",
-        account: numeroDeCuenta,
+        account: cuenta,
         amount_text: amountText.trim(),
         currency: "COP",
         parsed_amount: parseMontoCOP(amountText),
@@ -175,7 +171,7 @@ export async function consultarVanti(numeroDeCuenta, {
   return {
     ok: false,
     status: "ERROR",
-    account: numeroDeCuenta,
+    account: cuenta,
     error: (lastErr && lastErr.message) || "Error desconocido",
     fetched_at: nowISO()
   };
