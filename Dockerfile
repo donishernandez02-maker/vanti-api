@@ -1,6 +1,5 @@
 FROM node:20-slim
 
-# Instala dependencias para Chrome y el servidor de display virtual Xvfb
 RUN apt-get update && apt-get install -y \
       ca-certificates \
       fonts-liberation \
@@ -36,7 +35,6 @@ RUN apt-get update && apt-get install -y \
       lsb-release \
       wget \
       xdg-utils \
-      xvfb \
       && rm -rf /var/lib/apt/lists/*
 
 ENV TZ=America/Bogota \
@@ -51,5 +49,4 @@ RUN npm install
 COPY . .
 EXPOSE 8080
 
-# Lanza la aplicación DENTRO del servidor virtual Xvfb
-CMD ["xvfb-run", "--auto-servernum", "npm", "start"]
+CMD ["npm", "start"]
