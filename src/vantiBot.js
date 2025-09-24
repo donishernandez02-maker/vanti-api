@@ -8,8 +8,11 @@ const VANTI_URL = "https://pagosenlinea.grupovanti.com/";
 const SELECTOR_VALOR = "label.form.form-control.disabled";
 const SELECTOR_POPUP = "#swal2-html-container";
 
-// Obtener el proxy de las variables de entorno
-const proxy = process.env.PROXY_SERVER || "";
+// Lee las credenciales y el servidor del proxy desde variables de entorno
+const proxyServer = process.env.PROXY_SERVER; // Ejemplo: global.rotgb.711proxy.com:10000
+const proxyUsername = process.env.PROXY_USERNAME;
+const proxyPassword = process.env.PROXY_PASSWORD;
+
 const args = [
   "--no-sandbox",
   "--disable-setuid-sandbox",
@@ -19,9 +22,9 @@ const args = [
   "--disable-blink-features=AutomationControlled",
 ];
 
-// Añadir el argumento del proxy solo si está definido
-if (proxy) {
-  args.push(`--proxy-server=${proxy}`);
+// Añade el argumento del proxy solo si está definido
+if (proxyServer) {
+  args.push(`--proxy-server=${proxyServer}`);
 }
 
 const DEFAULT_OPTS = {
@@ -30,7 +33,8 @@ const DEFAULT_OPTS = {
   defaultViewport: { width: 1280, height: 900 }
 };
 
-// ... (El resto del archivo es exactamente el mismo que la versión anterior)
+// ... (El resto del archivo no cambia, pero se incluye completo para evitar errores)
+
 function nowISO() {
   return new Date().toISOString();
 }
@@ -100,6 +104,14 @@ export async function consultarVanti(numeroDeCuenta, {
       browser = await puppeteer.launch(launchOptions);
       const page = await browser.newPage();
       page.setDefaultTimeout(timeoutMs);
+
+      // --- CAMBIO CLAVE: Autenticación del Proxy ---
+      if (proxyUsername && proxyPassword) {
+        await page.authenticate({
+          username: proxyUsername,
+          password: proxyPassword
+        });
+      }
 
       await page.goto(VANTI_URL, { waitUntil: "networkidle2", timeout: timeoutMs });
 
