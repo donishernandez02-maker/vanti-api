@@ -1,7 +1,6 @@
 // src/vantiBot.js
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import { executablePath } from "puppeteer-core";
 
 // Usa el plugin de stealth para parecer un navegador real
 puppeteer.use(StealthPlugin());
@@ -12,15 +11,12 @@ const SELECTOR_POPUP = "#swal2-html-container";
 
 const DEFAULT_OPTS = {
   headless: "new",
-  // Usamos el ejecutable de Chrome que puppeteer-core conoce
-  executablePath: executablePath(),
   args: [
     "--no-sandbox",
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
     "--disable-gpu",
     "--no-zygote",
-    // Flag para intentar ayudar con iframes o recursos de distintos orígenes
     "--disable-web-security",
     "--disable-features=IsolateOrigins,site-per-process,BlockThirdPartyCookies",
   ],
