@@ -8,20 +8,29 @@ const VANTI_URL = "https://pagosenlinea.grupovanti.com/";
 const SELECTOR_VALOR = "label.form.form-control.disabled";
 const SELECTOR_POPUP = "#swal2-html-container";
 
+// Obtener el proxy de las variables de entorno
+const proxy = process.env.PROXY_SERVER || "";
+const args = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu",
+  "--no-zygote",
+  "--disable-blink-features=AutomationControlled",
+];
+
+// Añadir el argumento del proxy solo si está definido
+if (proxy) {
+  args.push(`--proxy-server=${proxy}`);
+}
+
 const DEFAULT_OPTS = {
-  // --- CAMBIO CLAVE: Ejecutar en modo "headful" (navegador real) ---
-  headless: false,
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage",
-    "--disable-infobars",
-    "--window-size=1280,800", // Definir un tamaño de ventana
-    "--disable-blink-features=AutomationControlled",
-  ],
-  defaultViewport: null // Dejar que la ventana controle el viewport
+  headless: "new",
+  args: args,
+  defaultViewport: { width: 1280, height: 900 }
 };
 
+// ... (El resto del archivo es exactamente el mismo que la versión anterior)
 function nowISO() {
   return new Date().toISOString();
 }
@@ -78,7 +87,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 export async function consultarVanti(numeroDeCuenta, {
   retries = 3,
-  timeoutMs = 40000, // Aumentamos un poco el timeout
+  timeoutMs = 30000,
   launchOptions = DEFAULT_OPTS
 } = {}) {
   if (!numeroDeCuenta) throw new Error("Falta numeroDeCuenta");
@@ -98,7 +107,7 @@ export async function consultarVanti(numeroDeCuenta, {
       await page.select("#empresa", "79");
 
       await page.waitForSelector("#cuenta_contrato", { visible: true });
-      await page.type("#cuenta_contrato", numeroDeCuenta, { delay: 30 + Math.random() * 50 }); // Delay de escritura humano
+      await page.type("#cuenta_contrato", numeroDeCuenta, { delay: 10 });
 
       if (await page.$("#image1")) {
         await page.click("#image1");
