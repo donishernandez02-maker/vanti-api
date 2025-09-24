@@ -2,7 +2,7 @@
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 
-// Usa el plugin de stealth para parecer un navegador real
+// Aplicamos el plugin stealth que se encarga de todo
 puppeteer.use(StealthPlugin());
 
 const VANTI_URL = "https://pagosenlinea.grupovanti.com/";
@@ -16,7 +16,9 @@ const DEFAULT_OPTS = {
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
     "--disable-gpu",
-    "--no-zygote"
+    "--no-zygote",
+    // --- EL ARGUMENTO MÁS IMPORTANTE PARA EVADIR DETECCIÓN ---
+    "--disable-blink-features=AutomationControlled",
   ],
   defaultViewport: { width: 1280, height: 900 }
 };
@@ -72,7 +74,6 @@ function interpretPopupText(txtRaw){
   const t = (txtRaw || "").toUpperCase();
   if (t.includes("YA PAGADA")) return { status: "PAID", message: "REFERENCIA YA PAGADA" };
   if (t.includes("NO ENCONTRADA")) return { status: "NOT_FOUND", message: "REFERENCIA NO ENCONTRADA" };
-  // Otros mensajes posibles
   return { status: "UNKNOWN", message: txtRaw?.trim() || "Mensaje desconocido" };
 }
 
@@ -91,43 +92,27 @@ export async function consultarVanti(numeroDeCuenta, {
     let browser;
     try {
       browser = await puppeteer.launch(launchOptions);
-      
-      // --- SOLUCIÓN PARA LAS COOKIES ---
-      // Obtenemos el contexto por defecto del navegador
-      const context = browser.defaultBrowserContext();
-      // Anulamos el bloqueo de cookies para todos los sitios
-      await context.overridePermissions(VANTI_URL, []);
-      
       const page = await browser.newPage();
       page.setDefaultTimeout(timeoutMs);
-      
-      await page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
-      );
 
       await page.goto(VANTI_URL, { waitUntil: "networkidle2", timeout: timeoutMs });
 
-      // Seleccionar empresa Vanti (value "79")
       await page.waitForSelector("#empresa", { visible: true });
       await page.select("#empresa", "79");
 
-      // Ingresar número
       await page.waitForSelector("#cuenta_contrato", { visible: true });
-      await page.type("#cuenta_contrato", numeroDeCuenta, { delay: 0 });
+      await page.type("#cuenta_contrato", numeroDeCuenta, { delay: 10 }); // Pequeño delay humano
 
-      // Seleccionar radio si existe
       if (await page.$("#image1")) {
         await page.click("#image1");
       }
 
-      // Esperar botón habilitado y consultar
       await page.waitForFunction(
         '(() => { const b = document.querySelector(".btn.btn-primary.query-button"); return b && !b.disabled; })()',
         { timeout: 15000 }
       );
       await page.click(".btn.btn-primary.query-button");
 
-      // Esperar resultado: valor o popup
       const winner = await Promise.race([
         page.waitForSelector(SELECTOR_VALOR, { visible: true, timeout: 20000 }).then(() => "VALOR"),
         page.waitForSelector(SELECTOR_POPUP, { visible: true, timeout: 20000 }).then(() => "POPUP")
@@ -149,7 +134,6 @@ export async function consultarVanti(numeroDeCuenta, {
         };
       }
 
-      // winner === "VALOR"
       const amountText = await extractValorAPagar(page);
       if (!amountText) throw new Error("No se encontró el valor a pagar.");
       await browser.close();
