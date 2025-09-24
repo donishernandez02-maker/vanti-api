@@ -12,7 +12,9 @@ const DEFAULT_OPTS = {
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
     "--disable-gpu",
-    "--no-zygote"
+    "--no-zygote",
+    // --- Flags añadidas para habilitar cookies de terceros ---
+    "--disable-features=BlockThirdPartyCookies,CookiesWithoutSameSiteMustBeSecure"
   ],
   defaultViewport: { width: 1280, height: 900 }
 };
