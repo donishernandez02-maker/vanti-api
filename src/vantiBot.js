@@ -1,5 +1,10 @@
 // src/vantiBot.js
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import { executablePath } from "puppeteer-core";
+
+// Usa el plugin de stealth para parecer un navegador real
+puppeteer.use(StealthPlugin());
 
 const VANTI_URL = "https://pagosenlinea.grupovanti.com/";
 const SELECTOR_VALOR = "label.form.form-control.disabled";
@@ -7,12 +12,17 @@ const SELECTOR_POPUP = "#swal2-html-container";
 
 const DEFAULT_OPTS = {
   headless: "new",
+  // Usamos el ejecutable de Chrome que puppeteer-core conoce
+  executablePath: executablePath(),
   args: [
     "--no-sandbox",
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
     "--disable-gpu",
-    "--no-zygote"
+    "--no-zygote",
+    // Flag para intentar ayudar con iframes o recursos de distintos orígenes
+    "--disable-web-security",
+    "--disable-features=IsolateOrigins,site-per-process,BlockThirdPartyCookies",
   ],
   defaultViewport: { width: 1280, height: 900 }
 };
@@ -89,6 +99,11 @@ export async function consultarVanti(numeroDeCuenta, {
       browser = await puppeteer.launch(launchOptions);
       const page = await browser.newPage();
       page.setDefaultTimeout(timeoutMs);
+      
+      // Opcional: Establecer un User-Agent de un navegador común
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+      );
 
       await page.goto(VANTI_URL, { waitUntil: "networkidle2", timeout: timeoutMs });
 
