@@ -16,9 +16,7 @@ const DEFAULT_OPTS = {
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
     "--disable-gpu",
-    "--no-zygote",
-    "--disable-web-security",
-    "--disable-features=IsolateOrigins,site-per-process,BlockThirdPartyCookies",
+    "--no-zygote"
   ],
   defaultViewport: { width: 1280, height: 900 }
 };
@@ -93,10 +91,16 @@ export async function consultarVanti(numeroDeCuenta, {
     let browser;
     try {
       browser = await puppeteer.launch(launchOptions);
+      
+      // --- SOLUCIÓN PARA LAS COOKIES ---
+      // Obtenemos el contexto por defecto del navegador
+      const context = browser.defaultBrowserContext();
+      // Anulamos el bloqueo de cookies para todos los sitios
+      await context.overridePermissions(VANTI_URL, []);
+      
       const page = await browser.newPage();
       page.setDefaultTimeout(timeoutMs);
       
-      // Opcional: Establecer un User-Agent de un navegador común
       await page.setUserAgent(
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
       );
@@ -137,7 +141,7 @@ export async function consultarVanti(numeroDeCuenta, {
         await browser.close();
         return {
           ok: info.status === "UNKNOWN" ? false : true,
-          status: info.status,            // "PAID" | "NOT_FOUND" | "UNKNOWN"
+          status: info.status,
           account: numeroDeCuenta,
           message: info.message,
           fetched_at: nowISO(),
@@ -151,7 +155,7 @@ export async function consultarVanti(numeroDeCuenta, {
       await browser.close();
       return {
         ok: true,
-        status: "DUE",                   // hay valor a pagar
+        status: "DUE",
         account: numeroDeCuenta,
         amount_text: amountText.trim(),
         currency: "COP",
