@@ -2,7 +2,6 @@
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 
-// Aplicamos el plugin stealth que se encarga de todo
 puppeteer.use(StealthPlugin());
 
 const VANTI_URL = "https://pagosenlinea.grupovanti.com/";
@@ -10,17 +9,17 @@ const SELECTOR_VALOR = "label.form.form-control.disabled";
 const SELECTOR_POPUP = "#swal2-html-container";
 
 const DEFAULT_OPTS = {
-  headless: "new",
+  // --- CAMBIO CLAVE: Ejecutar en modo "headful" (navegador real) ---
+  headless: false,
   args: [
     "--no-sandbox",
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
-    "--disable-gpu",
-    "--no-zygote",
-    // --- EL ARGUMENTO MÁS IMPORTANTE PARA EVADIR DETECCIÓN ---
+    "--disable-infobars",
+    "--window-size=1280,800", // Definir un tamaño de ventana
     "--disable-blink-features=AutomationControlled",
   ],
-  defaultViewport: { width: 1280, height: 900 }
+  defaultViewport: null // Dejar que la ventana controle el viewport
 };
 
 function nowISO() {
@@ -35,7 +34,6 @@ function parseMontoCOP(txt) {
 }
 
 async function extractValorAPagar(page) {
-  // 1) Intento por selector directo
   const direct = await page.$$eval(SELECTOR_VALOR, nodes => {
     for (const n of nodes) {
       const t = (n.textContent || "").trim();
@@ -45,7 +43,6 @@ async function extractValorAPagar(page) {
   }).catch(() => null);
   if (direct) return direct;
 
-  // 2) Fallback por texto cercano
   const probe = await page.evaluate(() => {
     function text(el){ return (el.textContent||"").trim(); }
     const candidates = Array.from(document.querySelectorAll("label, span, div, p, strong, b"));
@@ -81,7 +78,7 @@ function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 export async function consultarVanti(numeroDeCuenta, {
   retries = 3,
-  timeoutMs = 30000,
+  timeoutMs = 40000, // Aumentamos un poco el timeout
   launchOptions = DEFAULT_OPTS
 } = {}) {
   if (!numeroDeCuenta) throw new Error("Falta numeroDeCuenta");
@@ -101,7 +98,7 @@ export async function consultarVanti(numeroDeCuenta, {
       await page.select("#empresa", "79");
 
       await page.waitForSelector("#cuenta_contrato", { visible: true });
-      await page.type("#cuenta_contrato", numeroDeCuenta, { delay: 10 }); // Pequeño delay humano
+      await page.type("#cuenta_contrato", numeroDeCuenta, { delay: 30 + Math.random() * 50 }); // Delay de escritura humano
 
       if (await page.$("#image1")) {
         await page.click("#image1");
